@@ -64,7 +64,7 @@ jobs:
           file: ./ServiceExample/ServiceExample/Dockerfile
           push: true
           tags: |
-            ${{ vars.REGISTRY_URL }}/serviceexample:${{ steps.get_version.outputs.version }}
-            ${{ vars.REGISTRY_URL }}/serviceexample:latest
+            ajtonyp/serviceexample:${{ steps.get_version.outputs.version }}
+            ajtonyp/serviceexample:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
