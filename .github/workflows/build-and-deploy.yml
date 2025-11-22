@@ -1,0 +1,70 @@
+name: Build and Deploy ServiceExample
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'versionfile'
+
+jobs:
+  test-build-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout ServiceExample repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.APPLICATION_URL }}
+          path: ServiceExample
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      
+      - name: Restore dependencies
+        working-directory: ./ServiceExample
+        run: dotnet restore ServiceExample.sln
+      
+      - name: Build solution
+        working-directory: ./ServiceExample
+        run: dotnet build ServiceExample.sln --configuration Release --no-restore
+      
+      - name: Run tests
+        working-directory: ./ServiceExample
+        run: dotnet test ServiceExample.sln --configuration Release --no-build --verbosity normal
+      
+      - name: Checkout CI repository
+        uses: actions/checkout@v4
+        with:
+          path: CI
+      
+      - name: Read version from versionfile
+        id: get_version
+        run: |
+          VERSION=$(cat CI/versionfile | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGISTRY_URL }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ServiceExample
+          file: ./ServiceExample/ServiceExample/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.REGISTRY_URL }}/serviceexample:${{ steps.get_version.outputs.version }}
+            ${{ vars.REGISTRY_URL }}/serviceexample:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
