@@ -68,3 +68,11 @@ jobs:
             ajtonyp/serviceexample:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
+      - name: Trigger Helm Chart Update
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.HELM_REPO_PAT }}" \
+            https://api.github.com/repos/AjtonyP/ServiceExampleHelm/dispatches \
+            -d '{"event_type":"update-chart","client_payload":{"version":"${{ steps.get_version.outputs.version }}"}}'
